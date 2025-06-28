@@ -1,0 +1,229 @@
+{% extends 'monitor/base.html' %}
+{% block title %}📊 API Abuse Dashboard{% endblock %}
+
+{% block content %}
+<style>
+    body {
+        background-color: #1e1e2f;
+        color: #f0f0f0;
+    }
+    #dashboard-wrapper {
+        margin: 30px auto;
+        padding-bottom: 100px;
+    }
+    #top-charts {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        gap: 20px;
+    }
+    .chart-box {
+        flex: 1;
+        background-color: #2c2f3a;
+        padding: 15px;
+        border-radius: 10px;
+        box-shadow: 0 0 10px #00000066;
+        min-width: 250px;
+    }
+    #scatter-section {
+        width: 100%;
+        margin-top: 30px;
+        background-color: #2c2f3a;
+        padding: 15px;
+        border-radius: 10px;
+        box-shadow: 0 0 10px #00000066;
+    }
+    canvas {
+        width: 100% !important;
+        height: auto !important;
+    }
+</style>
+
+<div id="dashboard-wrapper" class="container-fluid">
+    <div id="top-charts">
+        <div class="chart-box"><canvas id="methodChart"></canvas></div>
+        <div class="chart-box"><canvas id="pieChart"></canvas></div>
+        <div class="chart-box"><canvas id="ipChart"></canvas></div>
+    </div>
+
+    <div id="scatter-section">
+        <h5 class="text-center mb-3">📌 Request Trends by IP + Port + Method</h5>
+        <canvas id="scatterChart"></canvas>
+    </div>
+
+    <div class="mt-4 text-center">
+        <button onclick="exportCSV()" class="btn btn-outline-light me-2">⬇ Export CSV</button>
+        <button onclick="exportPDF()" class="btn btn-outline-light">⬇ Export PDF</button>
+    </div>
+
+    <p id="noDataMsg" class="text-center mt-4" style="display: none;">No abuse data available. Please trigger some API activity.</p>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
+
+<script>
+let methodChart, ipChart, pieChart, scatterChart;
+let scatterDataCounter = 0;
+
+function initCharts() {
+    const commonOptions = {
+        responsive: true,
+        plugins: {
+            tooltip: {
+                callbacks: {
+                    label: function (ctx) {
+                        return `${ctx.label || ctx.raw.label}: ${ctx.raw.y || ctx.raw}`;
+                    }
+                }
+            },
+            legend: { position: 'top' }
+        }
+    };
+
+    methodChart = new Chart(document.getElementById('methodChart'), {
+        type: 'bar',
+        data: { labels: [], datasets: [{ label: 'Methods', data: [], backgroundColor: '#1cc88a' }] },
+        options: commonOptions
+    });
+
+    ipChart = new Chart(document.getElementById('ipChart'), {
+        type: 'bar',
+        data: { labels: [], datasets: [{ label: 'IP:Port', data: [], backgroundColor: '#36b9cc' }] },
+        options: commonOptions
+    });
+
+    pieChart = new Chart(document.getElementById('pieChart'), {
+        type: 'pie',
+        data: { labels: [], datasets: [{ data: [], backgroundColor: ['#4e73df', '#f6c23e', '#e74a3b', '#858796', '#20c997'] }] },
+        options: commonOptions
+    });
+
+    scatterChart = new Chart(document.getElementById('scatterChart'), {
+        type: 'scatter',
+        data: { datasets: [] },
+        options: {
+            responsive: true,
+            plugins: { legend: { position: 'top' }, tooltip: { enabled: true } },
+            scales: {
+                x: { title: { display: true, text: 'Live Time Sequence' } },
+                y: { title: { display: true, text: 'Method Type (Categorical)' }, ticks: { precision: 0 } }
+            }
+        }
+    });
+}
+
+function updateCharts() {
+    fetch(window.location.href, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        .then(res => res.json())
+        .then(data => {
+            const methodData = data.methods || [];
+            const ipData = data.ips || [];
+
+            if (!methodData.length && !ipData.length) {
+                document.getElementById('noDataMsg').style.display = 'block';
+                return;
+            }
+
+            document.getElementById('noDataMsg').style.display = 'none';
+
+            // --- Update Method Chart
+            methodChart.data.labels = methodData.map(m => m.method);
+            methodChart.data.datasets[0].data = methodData.map(m => m.count);
+            methodChart.update();
+
+            // --- Update IP:Port Chart
+            ipChart.data.labels = ipData.map(ip => `${ip.ip_address}:${ip.port || ''}`);
+            ipChart.data.datasets[0].data = ipData.map(ip => ip.count);
+            ipChart.update();
+
+            // --- Pie Chart
+            pieChart.data.labels = [
+                ...methodData.map(m => m.method),
+                ...ipData.map(ip => ip.ip_address),
+                ...ipData.map(ip => ip.port || '')
+            ];
+            pieChart.data.datasets[0].data = [
+                ...methodData.map(m => m.count),
+                ...ipData.map(ip => ip.count),
+                ...ipData.map(_ => 1)
+            ];
+            pieChart.update();
+
+            // --- Scatter Chart
+            scatterDataCounter++;
+            methodData.forEach((m, i) => {
+                const y = i + 1;
+                let existing = scatterChart.data.datasets.find(ds => ds.label === m.method);
+                if (!existing) {
+                    scatterChart.data.datasets.push({
+                        label: m.method,
+                        data: [{ x: scatterDataCounter, y }],
+                        backgroundColor: getColor(m.method),
+                        pointStyle: getShape(m.method),
+                        showLine: true,
+                        tension: 0.4
+                    });
+                } else {
+                    existing.data.push({ x: scatterDataCounter, y });
+                }
+            });
+            scatterChart.update();
+        });
+}
+
+function exportCSV() {
+    const csvRows = [['Chart', 'Label', 'Value']];
+    [...methodChart.data.labels].forEach((label, i) => {
+        csvRows.push(['Method', label, methodChart.data.datasets[0].data[i]]);
+    });
+    pieChart.data.labels.forEach((label, i) => {
+        csvRows.push(['Pie', label, pieChart.data.datasets[0].data[i]]);
+    });
+    const blob = new Blob([csvRows.map(r => r.join(',')).join('\n')], { type: 'text/csv' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'dashboard_data.csv';
+    a.click();
+}
+
+function exportPDF() {
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF();
+    pdf.text("API Abuse Dashboard Data", 10, 10);
+    let y = 20;
+    methodChart.data.labels.forEach((label, i) => {
+        pdf.text(`${label}: ${methodChart.data.datasets[0].data[i]}`, 10, y);
+        y += 6;
+    });
+    pdf.save('dashboard_data.pdf');
+}
+
+function getColor(method) {
+    return {
+        'GET': '#1cc88a',
+        'POST': '#36b9cc',
+        'PUT': '#f6c23e',
+        'DELETE': '#e74a3b',
+        'PATCH': '#858796'
+    }[method] || '#4e73df';
+}
+
+function getShape(method) {
+    return {
+        'GET': 'circle',
+        'POST': 'rectRot',
+        'PUT': 'triangle',
+        'DELETE': 'cross',
+        'PATCH': 'star'
+    }[method] || 'circle';
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    initCharts();
+    updateCharts();
+    setInterval(updateCharts, 1000);
+});
+</script>
+{% endblock %}

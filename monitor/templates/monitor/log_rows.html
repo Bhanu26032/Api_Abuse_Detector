@@ -1,0 +1,12 @@
+{% for log in logs %}
+<tr>
+    <td>{{ forloop.counter }}</td>
+    <td>{{ log.timestamp|date:"F j, Y, g:i a" }}</td>
+    <td>{{ log.ip_address }}</td>
+    <td>{{ log.port }}</td>
+    <td>{{ log.endpoint }}</td>
+    <td>{{ log.method }}</td>
+    <td>{{ log.token|truncatechars:15 }}</td>
+    <td>{{ log.payload|truncatechars:30 }}</td>
+</tr>
+{% endfor %}

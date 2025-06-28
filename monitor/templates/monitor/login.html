@@ -1,0 +1,24 @@
+{% extends 'monitor/base.html' %}
+{% block title %}Login{% endblock %}
+{% block content %}
+<h2>🔐 Login</h2>
+<form method="post" class="mt-3">
+    {% csrf_token %}
+    <div class="mb-3">
+        <label>Username:</label>
+        <input type="text" name="username" class="form-control" required>
+    </div>
+    <div class="mb-3">
+        <label>Password:</label>
+        <input type="password" name="password" class="form-control" required>
+    </div>
+    <button type="submit" class="btn btn-success">Login</button>
+    <br>
+    <p>Don't have an account? <a href="{% url 'register' %}">Register here</a></p>
+
+</form>
+
+<hr>
+<h5 class="mt-4">🔁 Login via SSO</h5>
+<a href="/login/sso/" class="btn btn-outline-secondary">Continue with SSO</a>
+{% endblock %}

@@ -1,0 +1,40 @@
+{% extends 'monitor/base.html' %}
+{% block title %}Welcome to API Abuse Detector{% endblock %}
+
+{% block content %}
+<div class="p-5 text-white bg-dark rounded-3" style="background-image: url('https://images.unsplash.com/photo-1606761568499-6e2b5e010a5e'); background-size: cover; background-position: center;">
+    <div class="container-fluid py-5">
+        <h1 class="display-5 fw-bold">🛡️ API Abuse Detection Tool</h1>
+        <p class="col-md-8 fs-4">Monitor and analyze your APIs in real time to detect threats like rate-limiting bypasses, injections, and suspicious behavior. Stay one step ahead of attackers with live logs, visual reports, and alerts.</p>
+    </div>
+</div>
+
+<div class="container my-5">
+    <h2>🔍 Why This Tool?</h2>
+    <p>This dashboard empowers developers and security teams to:
+        <ul>
+            <li>🚨 Detect rate-limit abuses</li>
+            <li>🛠️ Monitor API injection attempts</li>
+            <li>📈 Visualize API traffic trends</li>
+            <li>📬 Get notified on suspicious events</li>
+        </ul>
+    </p>
+</div>
+
+<div class="container my-5">
+    <button class="btn btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#contactCollapse" aria-expanded="false" aria-controls="contactCollapse">
+        📞 Contact Us
+    </button>
+    <div class="collapse mt-3" id="contactCollapse">
+        <div class="card card-body">
+            <strong>Email:</strong> support@abusedetector.io<br>
+            <strong>Phone:</strong> +91-9876543210<br>
+            <strong>Developer:</strong> Bhanuprakash Gowra
+        </div>
+    </div>
+</div>
+
+<footer class="bg-dark text-white text-center py-3 mt-5">
+    &copy; {{ now.year }} API Abuse Detector. All rights reserved. Developed by Bhanuprakash Gowra.
+</footer>
+{% endblock %}

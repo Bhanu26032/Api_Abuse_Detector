@@ -1,0 +1,5 @@
+to run this apolication there are two ways 
+one is that python manage.py runserver it will run locally so that you will be getting loged with so many logs 
+so i changed it into websockets because of two way precession ok to run this thing 
+uvicorn abuse_detector.asgi:application
+so using uvicorn we can run this appolication it is good 

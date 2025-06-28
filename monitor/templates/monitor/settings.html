@@ -1,0 +1,22 @@
+
+{% extends 'monitor/base.html' %}
+{% block title %}Admin Settings{% endblock %}
+
+{% block content %}
+{% if users %}
+<table class="table table-bordered">
+    <thead><tr><th>Username</th><th>Email</th><th>Is Admin</th></tr></thead>
+    <tbody>
+    {% for user in users %}
+        <tr>
+            <td>{{ user.username }}</td>
+            <td>{{ user.email }}</td>
+            <td>{{ user.is_superuser }}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p>No users found.</p>
+{% endif %}
+{% endblock %}
